@@ -1,0 +1,34 @@
+name: Deploy to Prod
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  redeploy:
+    name: Deploy to the Prod stage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v3
+
+      - name: Setup SSH and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ec2-44-201-157-226.compute-1.amazonaws.com
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          ssh-option: "-o StrictHostKeyChecking=no"
+          script: |
+            cd ~/prod/DevOps-Testing-On-TurboRepo-project
+            pnpm install
+            pnpm build
+            cd packages/db
+            npx prisma generate
+            cd ../..
+            pm2 restart http-backend
+            pm2 restart ws-backend
+            pm2 restart web
